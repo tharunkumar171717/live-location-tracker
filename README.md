@@ -60,3 +60,22 @@ See the header comment in [`server/src/ws/hub.js`](server/src/ws/hub.js).
 `server/src/bus.js` is the seam. Producers call `locationBus.publish()`, and the WebSocket
 broadcaster subscribes. Swapping in a Kafka producer + consumer group there lets multiple
 server instances share location events without changing any other code.
+
+## Deployment
+
+| Part    | Host    | URL |
+|---------|---------|-----|
+| Web     | Vercel  | https://live-location-tracker-amber.vercel.app |
+| Server  | Railway | root directory `server/` (see `server/railway.json`) |
+
+Vercel can't host the server: its functions don't keep WebSocket connections open.
+
+**Railway variables** (copy values from `server/.env`): `DATABASE_URL`, `SUPABASE_URL`,
+`SUPABASE_PUBLISHABLE_KEY`, `DB_SSL=true`, `DB_SSL_REJECT_UNAUTHORIZED=false`,
+`CORS_ORIGINS=https://live-location-tracker-amber.vercel.app,http://localhost:3000`.
+Railway sets `PORT` itself.
+
+**Vercel variables** (project root `web/`): `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`,
+`VITE_API_URL=https://<railway-domain>`, `VITE_WS_URL=wss://<railway-domain>/ws`.
+
+**Supabase redirect URLs** must also include `https://live-location-tracker-amber.vercel.app/auth/callback`.
