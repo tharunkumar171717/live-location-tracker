@@ -1,5 +1,4 @@
-// Straight-line ("as the crow flies") distance helpers. Plain JS, shared
-// verbatim with the mobile app.
+// Straight-line ("as the crow flies") distance helpers.
 
 const EARTH_RADIUS_M = 6_371_000;
 const toRad = (deg) => (deg * Math.PI) / 180;

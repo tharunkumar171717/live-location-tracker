@@ -3,8 +3,7 @@ import { bearingDegrees, distanceMeters } from '../lib/geo.js';
 
 // GPS delivers roughly one fix per second. Like map apps do, predict where a
 // moving point is between fixes from its speed and heading, so the marker
-// and distance move continuously instead of jumping once a second. Plain
-// React, shared verbatim with the mobile app.
+// and distance move continuously instead of jumping once a second.
 
 const TICK_MS = 200;
 const MAX_EXTRAPOLATE_MS = 2500; // stop predicting if fixes stop arriving

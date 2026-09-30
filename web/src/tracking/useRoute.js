@@ -9,8 +9,7 @@ const OFF_ROUTE_M = 40; // refetch when we're this far from the route
 
 // Road route from `from` to `to`, refetched only when needed. Progress along
 // the route (remaining distance, ETA) is recomputed locally on every position
-// change, so the numbers update instantly between fetches. Plain React,
-// shared verbatim with the mobile app.
+// change, so the numbers update instantly between fetches.
 export function useRoute(from, to, mode) {
   const [route, setRoute] = useState(null);
   const [error, setError] = useState(null);

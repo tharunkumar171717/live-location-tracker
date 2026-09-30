@@ -1,6 +1,6 @@
 // Client for the /ws tracking protocol (see server/src/ws/hub.js).
 // Handles auth handshake, token refresh, rejoining sessions after reconnects,
-// and exponential backoff. Plain JS, shared verbatim with the mobile app.
+// and exponential backoff.
 
 export class TrackingSocket {
   constructor({ url, getToken, onMessage, onStatus }) {

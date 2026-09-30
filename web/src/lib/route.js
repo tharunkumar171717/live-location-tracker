@@ -1,7 +1,6 @@
 // Road routing via the public OSRM servers run by FOSSGIS
 // (https://routing.openstreetmap.de). Their usage policy allows light use:
-// at most one request per second, so callers must throttle. Plain JS, shared
-// verbatim with the mobile app.
+// at most one request per second, so callers must throttle.
 
 const BASE = 'https://routing.openstreetmap.de';
 

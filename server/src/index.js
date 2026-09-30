@@ -8,7 +8,6 @@ import { attachWebSocketServer } from './ws/hub.js';
 
 const app = express();
 app.disable('x-powered-by');
-// Mobile apps send no Origin header, so they're unaffected by CORS.
 app.use(cors({ origin: config.corsOrigins }));
 app.use(express.json({ limit: '32kb' }));
 

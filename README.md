@@ -1,7 +1,7 @@
 # Live Location Tracker
 
 ```
-Google ⇄ Supabase Auth ⇄ web (React/Vite) + mobile (Expo, Android)
+Google ⇄ Supabase Auth ⇄ web (React/Vite)
                               │ access token
                               ▼
                   Node server: REST /api + WebSocket /ws
@@ -13,7 +13,6 @@ Google ⇄ Supabase Auth ⇄ web (React/Vite) + mobile (Expo, Android)
 |-----------|----------------------------------------|------|
 | `server/` | Express + `ws`, verifies Supabase JWTs | 4000 |
 | `web/`    | React + Vite + Leaflet (OpenStreetMap) | 3000 |
-| `mobile/` | Expo SDK 57 + Expo Router + react-native-maps | – |
 
 ## One-time Supabase setup
 
@@ -24,20 +23,13 @@ Google ⇄ Supabase Auth ⇄ web (React/Vite) + mobile (Expo, Android)
    `https://jisgtfioddrtpqscbbnt.supabase.co/auth/v1/callback`.
 3. **Redirect URLs**: Supabase → Authentication → URL Configuration → add
    - `http://localhost:3000/auth/callback` (web)
-   - `gmap://auth/callback` (Android dev/release build)
-   - `exp://**` (only if you test in Expo Go)
 
 ## Run
 
 ```sh
 cd server && npm run dev          # http://localhost:4000, ws://localhost:4000/ws
 cd web && npm run dev             # http://localhost:3000
-cd mobile && npm run android      # builds a dev build onto an emulator/device
 ```
-
-Mobile networking: the emulator reaches your Mac at `10.0.2.2` (default in `mobile/.env`).
-On a physical phone set `EXPO_PUBLIC_API_URL` / `EXPO_PUBLIC_WS_URL` to your Mac's LAN IP.
-Maps on Android need `GOOGLE_MAPS_ANDROID_API_KEY` in `mobile/.env` (Maps SDK for Android).
 
 ## Security model
 
@@ -49,7 +41,6 @@ Maps on Android need `GOOGLE_MAPS_ANDROID_API_KEY` in `mobile/.env` (Maps SDK fo
 - Creating, joining, sending locations, and viewing locations all check session membership
   in the database; non-members get 404. Only owners can end a session.
 - RLS is enabled on all tables as a second line of defence.
-- Mobile sessions are AES-encrypted at rest with the key in Android Keystore (SecureStore).
 
 ## WebSocket protocol
 
