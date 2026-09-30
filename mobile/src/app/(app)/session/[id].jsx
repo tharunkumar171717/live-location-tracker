@@ -9,6 +9,8 @@ import { useDeviceLocation } from '../../../tracking/useDeviceLocation.js';
 import { Button } from '../../../components/Button.jsx';
 import { colors, ui } from '../../../ui.js';
 import { bearingDegrees, compassDirection, distanceMeters, formatDistance } from '../../../lib/geo.js';
+import { TRAVEL_MODES, formatDuration } from '../../../lib/route.js';
+import { useRoute } from '../../../tracking/useRoute.js';
 
 const COLORS = ['#2563eb', '#dc2626', '#16a34a', '#9333ea', '#ea580c', '#0891b2', '#db2777', '#65a30d'];
 function colorFor(userId) {
@@ -25,6 +27,7 @@ export default function SessionScreen() {
   const [sharing, setSharing] = useState(false);
   // {type:'point', lat, lng} | {type:'member', userId} | null
   const [target, setTarget] = useState(null);
+  const [travelMode, setTravelMode] = useState('car');
   const mapRef = useRef(null);
   const fitted = useRef(false);
   const requested = useRef(new Set());
@@ -73,7 +76,19 @@ export default function SessionScreen() {
   // A member target follows that member as their location updates.
   const self = positions[user.id];
   const targetPoint = target?.type === 'member' ? positions[target.userId] : target;
-  const distance = self && targetPoint ? distanceMeters(self, targetPoint) : null;
+  const straight = self && targetPoint ? distanceMeters(self, targetPoint) : null;
+  const nav = useRoute(self, targetPoint, travelMode);
+  // Road distance when we have a route, straight line otherwise.
+  const distance = nav.progress ? nav.progress.remaining : straight;
+  const routeCoords = nav.progress?.remainingCoords;
+
+  // Re-render every second so "GPS updated Ns ago" stays current.
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const gpsAge = self?.recordedAt ? Math.max(0, Math.round((now - new Date(self.recordedAt)) / 1000)) : null;
   const targetLabel = target?.type === 'member' ? names[target.userId] || 'Member' : 'Map point';
 
   // Fit the camera to everyone the first time positions arrive.
@@ -110,7 +125,14 @@ export default function SessionScreen() {
           setTarget({ type: 'point', lat: latitude, lng: longitude });
         }}
       >
-        {self && targetPoint && (
+        {routeCoords?.length > 1 && (
+          <Polyline
+            coordinates={routeCoords.map((c) => ({ latitude: c.lat, longitude: c.lng }))}
+            strokeColor="#1a73e8"
+            strokeWidth={6}
+          />
+        )}
+        {self && targetPoint && !(routeCoords?.length > 1) && (
           <Polyline
             coordinates={[
               { latitude: self.lat, longitude: self.lng },
@@ -190,18 +212,63 @@ export default function SessionScreen() {
           ) : (
             <>
               <Text style={ui.small}>To {targetLabel}</Text>
-              {distance != null ? (
-                <Text style={{ fontSize: 28, fontWeight: '700', fontVariant: ['tabular-nums'], color: colors.text }}>
-                  {formatDistance(distance)}
-                  <Text style={[ui.muted, ui.small]}> {compassDirection(bearingDegrees(self, targetPoint))}</Text>
-                </Text>
-              ) : (
+              <View style={[ui.row, { gap: 6 }]}>
+                {Object.entries(TRAVEL_MODES).map(([key, m]) => {
+                  const active = travelMode === key;
+                  return (
+                    <Text
+                      key={key}
+                      onPress={() => setTravelMode(key)}
+                      style={{
+                        flex: 1,
+                        textAlign: 'center',
+                        paddingVertical: 6,
+                        borderRadius: 999,
+                        borderWidth: 1,
+                        overflow: 'hidden',
+                        borderColor: active ? '#1a73e8' : colors.border,
+                        backgroundColor: active ? '#1a73e8' : '#fff',
+                        color: active ? '#fff' : colors.text,
+                      }}
+                    >
+                      {m.label}
+                    </Text>
+                  );
+                })}
+              </View>
+              {!self || !targetPoint ? (
                 <Text style={[ui.muted, ui.small]}>
                   {!self ? 'Waiting for your location…' : 'Waiting for their location…'}
                 </Text>
+              ) : nav.progress ? (
+                <>
+                  <Text style={{ fontSize: 28, fontWeight: '700', fontVariant: ['tabular-nums'], color: colors.text }}>
+                    {formatDuration(nav.progress.eta)}
+                    <Text style={{ fontSize: 18, fontWeight: '600', color: colors.muted }}>
+                      {' '}· {formatDistance(nav.progress.remaining)}
+                    </Text>
+                  </Text>
+                  <Text style={[ui.muted, ui.small]}>
+                    by road{nav.rerouting ? ' · rerouting…' : ''} · {formatDistance(straight)} straight line{' '}
+                    {compassDirection(bearingDegrees(self, targetPoint))}
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Text style={{ fontSize: 28, fontWeight: '700', fontVariant: ['tabular-nums'], color: colors.text }}>
+                    {formatDistance(straight)}
+                    <Text style={[ui.muted, ui.small]}> {compassDirection(bearingDegrees(self, targetPoint))}</Text>
+                  </Text>
+                  <Text style={[ui.small, nav.error ? ui.error : ui.muted]}>
+                    straight line · {nav.error || (nav.loading ? 'finding road route…' : 'no road route')}
+                  </Text>
+                </>
               )}
-              {self?.accuracy > 0 && distance != null && (
-                <Text style={[ui.muted, ui.small]}>straight line · GPS accuracy ±{Math.round(self.accuracy)} m</Text>
+              {self && (
+                <Text style={[ui.muted, ui.small]}>
+                  GPS {gpsAge != null ? `updated ${gpsAge}s ago` : 'waiting'}
+                  {self.accuracy > 0 ? ` · ±${Math.round(self.accuracy)} m` : ''}
+                </Text>
               )}
             </>
           )}

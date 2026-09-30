@@ -20,6 +20,7 @@ function colorFor(userId) {
 }
 
 const TARGET_COLOR = '#111827';
+const ROUTE_COLOR = '#1a73e8';
 
 // Fit to everyone once the first positions arrive; after that, leave the
 // view alone so the user can pan freely.
@@ -43,7 +44,9 @@ function PickOnClick({ onPick }) {
 
 // target: {lat, lng} or null. A target placed on a member is drawn as that
 // member's marker, so only a free-standing point gets its own marker.
-export function LiveMap({ positions, names, selfId, target, targetIsMember, distance, onPickTarget }) {
+// routeCoords: the remaining road route [{lat, lng}], or null to fall back to
+// a straight dashed line.
+export function LiveMap({ positions, names, selfId, target, targetIsMember, distance, routeCoords, onPickTarget }) {
   const points = Object.values(positions);
   const self = positions[selfId];
 
@@ -56,7 +59,23 @@ export function LiveMap({ positions, names, selfId, target, targetIsMember, dist
       <FitOnFirstData points={points} />
       <PickOnClick onPick={onPickTarget} />
 
-      {self && target && (
+      {routeCoords?.length > 1 && (
+        <>
+          <Polyline
+            positions={routeCoords.map((c) => [c.lat, c.lng])}
+            pathOptions={{ color: '#fff', weight: 9, opacity: 0.9 }}
+          />
+          <Polyline positions={routeCoords.map((c) => [c.lat, c.lng])} pathOptions={{ color: ROUTE_COLOR, weight: 6 }}>
+            {distance != null && (
+              <Tooltip permanent direction="center" className="distance-tooltip">
+                {formatDistance(distance)}
+              </Tooltip>
+            )}
+          </Polyline>
+        </>
+      )}
+
+      {self && target && !(routeCoords?.length > 1) && (
         <Polyline
           positions={[[self.lat, self.lng], [target.lat, target.lng]]}
           pathOptions={{ color: TARGET_COLOR, weight: 3, dashArray: '8 8', opacity: 0.8 }}

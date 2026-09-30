@@ -7,6 +7,8 @@ import { LiveMap } from '../components/LiveMap.jsx';
 import { useTrackingSession } from '../tracking/useTrackingSession.js';
 import { useGeolocation } from '../tracking/useGeolocation.js';
 import { bearingDegrees, compassDirection, distanceMeters, formatDistance } from '../lib/geo.js';
+import { TRAVEL_MODES, formatDuration } from '../lib/route.js';
+import { useRoute } from '../tracking/useRoute.js';
 
 export function SessionPage() {
   const { sessionId } = useParams();
@@ -17,6 +19,7 @@ export function SessionPage() {
   const [sharing, setSharing] = useState(false);
   // {type:'point', lat, lng} | {type:'member', userId} | null
   const [target, setTarget] = useState(null);
+  const [travelMode, setTravelMode] = useState('car');
 
   const live = useTrackingSession(sessionId);
   const ended = live.ended || session?.status === 'ended';
@@ -67,7 +70,19 @@ export function SessionPage() {
   // A member target follows that member as their location updates.
   const self = positions[user.id];
   const targetPoint = target?.type === 'member' ? positions[target.userId] : target;
-  const distance = self && targetPoint ? distanceMeters(self, targetPoint) : null;
+  const straight = self && targetPoint ? distanceMeters(self, targetPoint) : null;
+  const nav = useRoute(self, targetPoint, travelMode);
+  // Road distance when we have a route, straight line otherwise.
+  const distance = nav.progress ? nav.progress.remaining : straight;
+
+  // Re-render every second so "GPS updated Ns ago" stays current.
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const gpsAge = self?.recordedAt ? Math.max(0, Math.round((now - new Date(self.recordedAt)) / 1000)) : null;
+
   const targetLabel = target?.type === 'member' ? members[target.userId] || 'Member' : 'Map point';
 
   if (loadError) {
@@ -118,18 +133,50 @@ export function SessionPage() {
                   To <strong>{targetLabel}</strong>{' '}
                   <button className="link-btn small" onClick={() => setTarget(null)}>clear</button>
                 </p>
-                {distance != null ? (
-                  <p className="distance">
-                    {formatDistance(distance)}
-                    <span className="muted small"> {compassDirection(bearingDegrees(self, targetPoint))}</span>
-                  </p>
-                ) : (
+                <div className="mode-tabs" role="tablist">
+                  {Object.entries(TRAVEL_MODES).map(([key, m]) => (
+                    <button
+                      key={key}
+                      role="tab"
+                      aria-selected={travelMode === key}
+                      className={travelMode === key ? 'active' : ''}
+                      onClick={() => setTravelMode(key)}
+                    >
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+                {!self || !targetPoint ? (
                   <p className="muted small">
                     {!self ? 'Waiting for your location…' : 'Waiting for their location…'}
                   </p>
+                ) : nav.progress ? (
+                  <>
+                    <p className="distance">
+                      {formatDuration(nav.progress.eta)}
+                      <span className="distance-sub"> · {formatDistance(nav.progress.remaining)}</span>
+                    </p>
+                    <p className="muted small">
+                      by road{nav.rerouting ? ' · rerouting…' : ''} · {formatDistance(straight)} straight line{' '}
+                      {compassDirection(bearingDegrees(self, targetPoint))}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="distance">
+                      {formatDistance(straight)}
+                      <span className="muted small"> {compassDirection(bearingDegrees(self, targetPoint))}</span>
+                    </p>
+                    <p className={`small ${nav.error ? 'error' : 'muted'}`}>
+                      straight line · {nav.error || (nav.loading ? 'finding road route…' : 'no road route')}
+                    </p>
+                  </>
                 )}
-                {self?.accuracy > 0 && distance != null && (
-                  <p className="muted small">straight line · GPS accuracy ±{Math.round(self.accuracy)} m</p>
+                {self && (
+                  <p className="muted small">
+                    GPS {gpsAge != null ? `updated ${gpsAge}s ago` : 'waiting'}
+                    {self.accuracy > 0 ? ` · ±${Math.round(self.accuracy)} m` : ''}
+                  </p>
                 )}
               </>
             )}
@@ -192,6 +239,7 @@ export function SessionPage() {
             target={targetPoint}
             targetIsMember={target?.type === 'member'}
             distance={distance}
+            routeCoords={nav.progress?.remainingCoords}
             onPickTarget={(pt) => setTarget({ type: 'point', ...pt })}
           />
         </section>

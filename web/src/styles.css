@@ -84,3 +84,8 @@ input:focus { outline: 2px solid var(--primary); outline-offset: -1px; }
 .distance { font-size: 1.8rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 .link-btn { background: none; border: 0; padding: 0; margin-left: 6px; color: #2563eb; cursor: pointer; text-decoration: underline; }
 .leaflet-tooltip.distance-tooltip { font-weight: 700; font-size: 0.9rem; }
+
+.distance-sub { font-size: 1.1rem; font-weight: 600; color: var(--muted); }
+.mode-tabs { display: flex; gap: 4px; margin: 4px 0; }
+.mode-tabs button { flex: 1; padding: 6px 0; border: 1px solid var(--border); background: #fff; border-radius: 999px; cursor: pointer; font-size: 0.85rem; }
+.mode-tabs button.active { background: #1a73e8; border-color: #1a73e8; color: #fff; }
