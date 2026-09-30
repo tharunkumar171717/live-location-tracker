@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
-// Watches the browser's GPS while `enabled`, calling onPosition at most every
-// `minIntervalMs`. Geolocation needs a secure context (https or localhost).
+// Watches the browser's GPS while `enabled`, calling onPosition (if given) at
+// most every `minIntervalMs`. Geolocation needs a secure context (https or localhost).
 export function useGeolocation({ enabled, onPosition, minIntervalMs = 3000 }) {
   const [error, setError] = useState(null);
   const [current, setCurrent] = useState(null);
@@ -29,7 +29,7 @@ export function useGeolocation({ enabled, onPosition, minIntervalMs = 3000 }) {
           timestamp: pos.timestamp,
         };
         setCurrent(loc);
-        if (Date.now() - lastSent.current >= minIntervalMs) {
+        if (callback.current && Date.now() - lastSent.current >= minIntervalMs) {
           lastSent.current = Date.now();
           callback.current?.(loc);
         }

@@ -17,7 +17,25 @@ export function SessionPage() {
 
   const live = useTrackingSession(sessionId);
   const ended = live.ended || session?.status === 'ended';
-  const geo = useGeolocation({ enabled: sharing && !ended, onPosition: live.sendLocation });
+  // GPS runs whenever the session is open so you always see yourself on the
+  // map; positions are only sent to the server while sharing.
+  const geo = useGeolocation({ enabled: !ended, onPosition: sharing ? live.sendLocation : undefined });
+
+  // Send the fix we already have as soon as sharing starts.
+  const { sendLocation } = live;
+  useEffect(() => {
+    if (sharing && geo.current) sendLocation(geo.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sharing, sendLocation]);
+
+  // Your own marker comes straight from the device, not the server round trip.
+  const positions = useMemo(
+    () =>
+      geo.current
+        ? { ...live.positions, [user.id]: { userId: user.id, ...geo.current, recordedAt: geo.current.timestamp } }
+        : live.positions,
+    [live.positions, geo.current, user.id],
+  );
 
   useEffect(() => {
     api.getSession(sessionId).then(setSession).catch((e) => setLoadError(e.message));
@@ -84,7 +102,7 @@ export function SessionPage() {
           <h3>Members</h3>
           <ul className="member-list">
             {session.members.map((m) => {
-              const p = live.positions[m.user_id];
+              const p = positions[m.user_id];
               return (
                 <li key={m.user_id}>
                   <strong>{m.user_id === user.id ? 'You' : members[m.user_id]}</strong>
@@ -123,7 +141,7 @@ export function SessionPage() {
         </aside>
 
         <section className="map-wrap">
-          <LiveMap positions={live.positions} names={members} selfId={user.id} />
+          <LiveMap positions={positions} names={members} selfId={user.id} />
         </section>
       </main>
     </>

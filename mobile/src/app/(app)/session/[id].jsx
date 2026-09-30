@@ -28,7 +28,16 @@ export default function SessionScreen() {
 
   const live = useTrackingSession(sessionId);
   const ended = live.ended || session?.status === 'ended';
-  const geo = useDeviceLocation({ enabled: sharing && !ended, onPosition: live.sendLocation });
+  // GPS runs whenever the session is open so you always see yourself on the
+  // map; positions are only sent to the server while sharing.
+  const geo = useDeviceLocation({ enabled: !ended, onPosition: sharing ? live.sendLocation : undefined });
+
+  // Send the fix we already have as soon as sharing starts.
+  const { sendLocation } = live;
+  useEffect(() => {
+    if (sharing && geo.current) sendLocation(geo.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sharing, sendLocation]);
 
   useEffect(() => {
     api.getSession(sessionId).then(setSession).catch((e) => setLoadError(e.message));
@@ -48,7 +57,15 @@ export default function SessionScreen() {
     () => Object.fromEntries((session?.members || []).map((m) => [m.user_id, m.full_name || m.email || 'Member'])),
     [session],
   );
-  const points = Object.values(live.positions);
+  // Your own marker comes straight from the device, not the server round trip.
+  const positions = useMemo(
+    () =>
+      geo.current
+        ? { ...live.positions, [user.id]: { userId: user.id, ...geo.current, recordedAt: geo.current.timestamp } }
+        : live.positions,
+    [live.positions, geo.current, user.id],
+  );
+  const points = Object.values(positions);
 
   // Fit the camera to everyone the first time positions arrive.
   useEffect(() => {
@@ -133,7 +150,7 @@ export default function SessionScreen() {
         <View style={[ui.card, { gap: 8 }]}>
           <Text style={ui.h2}>Members</Text>
           {session.members.map((m) => {
-            const p = live.positions[m.user_id];
+            const p = positions[m.user_id];
             return (
               <View key={m.user_id}>
                 <Text style={{ fontWeight: '600' }}>

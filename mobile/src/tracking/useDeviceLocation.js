@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import * as Location from 'expo-location';
 
-// Foreground GPS while `enabled`. Sends at most every `minIntervalMs`.
+// Foreground GPS while `enabled`. Calls onPosition (if given) at most every `minIntervalMs`.
 export function useDeviceLocation({ enabled, onPosition, minIntervalMs = 3000 }) {
   const [error, setError] = useState(null);
   const [current, setCurrent] = useState(null);
@@ -34,7 +34,7 @@ export function useDeviceLocation({ enabled, onPosition, minIntervalMs = 3000 })
             timestamp: pos.timestamp,
           };
           setCurrent(loc);
-          if (Date.now() - lastSent >= minIntervalMs) {
+          if (callback.current && Date.now() - lastSent >= minIntervalMs) {
             lastSent = Date.now();
             callback.current?.(loc);
           }
