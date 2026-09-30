@@ -187,6 +187,12 @@ export function SessionPage() {
                     {self.accuracy > 0 ? ` · ±${Math.round(self.accuracy)} m` : ''}
                   </p>
                 )}
+                {self?.accuracy > 20 && (
+                  <p className="error small">
+                    Weak GPS (±{Math.round(self.accuracy)} m). Small moves won't register; go outdoors and turn on
+                    precise location.
+                  </p>
+                )}
               </>
             )}
           </section>

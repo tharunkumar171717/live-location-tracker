@@ -279,6 +279,11 @@ export default function SessionScreen() {
                   {self.accuracy > 0 ? ` · ±${Math.round(self.accuracy)} m` : ''}
                 </Text>
               )}
+              {self?.accuracy > 20 && (
+                <Text style={[ui.error, ui.small]}>
+                  Weak GPS (±{Math.round(self.accuracy)} m). Small moves won't register; go outdoors.
+                </Text>
+              )}
             </>
           )}
         </View>

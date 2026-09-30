@@ -46,18 +46,23 @@ export async function fetchRoute(from, to, mode, signal) {
 
   const r = body.routes[0];
   const coords = r.geometry.coordinates.map(([lng, lat]) => ({ lat, lng }));
+  // OSRM starts and ends on the nearest road. Add the final off-road leg (to a
+  // target in a park, building, etc.) as a straight line so the total isn't
+  // shorter than the straight-line distance.
+  const last = coords[coords.length - 1];
+  if (last && segmentLength(last, to) > 1) coords.push({ lat: to.lat, lng: to.lng });
   const cum = [0];
   for (let i = 1; i < coords.length; i++) cum.push(cum[i - 1] + segmentLength(coords[i - 1], coords[i]));
-  // OSRM's distance is authoritative; scale our geometry sum to match it.
-  const scale = cum[cum.length - 1] > 0 ? r.distance / cum[cum.length - 1] : 1;
+  const distance = cum[cum.length - 1];
   return {
     mode,
     from,
     to,
-    distance: r.distance,
-    duration: r.duration,
+    distance,
+    // Keep OSRM's pace for the road part; walking pace (1.4 m/s) for the tail.
+    duration: r.duration + Math.max(0, distance - r.distance) / 1.4,
     coords,
-    cum: cum.map((d) => d * scale),
+    cum,
   };
 }
 
