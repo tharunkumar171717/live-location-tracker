@@ -23,7 +23,9 @@ export function useDeviceLocation({ enabled, onPosition, minIntervalMs = 3000 })
         return;
       }
       subscription = await Location.watchPositionAsync(
-        { accuracy: Location.Accuracy.High, timeInterval: minIntervalMs, distanceInterval: 5 },
+        // Watch at 1 s / 1 m so on-screen distance stays live; sends are still
+        // throttled to minIntervalMs below.
+        { accuracy: Location.Accuracy.High, timeInterval: 1000, distanceInterval: 1 },
         (pos) => {
           const loc = {
             lat: pos.coords.latitude,

@@ -77,3 +77,10 @@ input:focus { outline: 2px solid var(--primary); outline-offset: -1px; }
   .session-layout { grid-template-columns: 1fr; height: auto; }
   .map-wrap { height: 60vh; }
 }
+
+.target-card { border: 1px solid var(--border); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 4px; }
+.target-card h3 { margin: 0; }
+.target-card p { margin: 0; }
+.distance { font-size: 1.8rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.link-btn { background: none; border: 0; padding: 0; margin-left: 6px; color: #2563eb; cursor: pointer; text-decoration: underline; }
+.leaflet-tooltip.distance-tooltip { font-weight: 700; font-size: 0.9rem; }

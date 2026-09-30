@@ -6,6 +6,7 @@ import { Header } from '../components/Header.jsx';
 import { LiveMap } from '../components/LiveMap.jsx';
 import { useTrackingSession } from '../tracking/useTrackingSession.js';
 import { useGeolocation } from '../tracking/useGeolocation.js';
+import { bearingDegrees, compassDirection, distanceMeters, formatDistance } from '../lib/geo.js';
 
 export function SessionPage() {
   const { sessionId } = useParams();
@@ -14,6 +15,8 @@ export function SessionPage() {
   const [session, setSession] = useState(null);
   const [loadError, setLoadError] = useState(null);
   const [sharing, setSharing] = useState(false);
+  // {type:'point', lat, lng} | {type:'member', userId} | null
+  const [target, setTarget] = useState(null);
 
   const live = useTrackingSession(sessionId);
   const ended = live.ended || session?.status === 'ended';
@@ -61,6 +64,12 @@ export function SessionPage() {
     [session],
   );
 
+  // A member target follows that member as their location updates.
+  const self = positions[user.id];
+  const targetPoint = target?.type === 'member' ? positions[target.userId] : target;
+  const distance = self && targetPoint ? distanceMeters(self, targetPoint) : null;
+  const targetLabel = target?.type === 'member' ? members[target.userId] || 'Member' : 'Map point';
+
   if (loadError) {
     return (
       <>
@@ -99,6 +108,33 @@ export function SessionPage() {
           {geo.error && <p className="error small">{geo.error}</p>}
           {live.error && <p className="error small">{live.error}</p>}
 
+          <section className="target-card">
+            <h3>Distance</h3>
+            {!target ? (
+              <p className="muted small">Click the map, or pick a member below, to set a target.</p>
+            ) : (
+              <>
+                <p className="small">
+                  To <strong>{targetLabel}</strong>{' '}
+                  <button className="link-btn small" onClick={() => setTarget(null)}>clear</button>
+                </p>
+                {distance != null ? (
+                  <p className="distance">
+                    {formatDistance(distance)}
+                    <span className="muted small"> {compassDirection(bearingDegrees(self, targetPoint))}</span>
+                  </p>
+                ) : (
+                  <p className="muted small">
+                    {!self ? 'Waiting for your location…' : 'Waiting for their location…'}
+                  </p>
+                )}
+                {self?.accuracy > 0 && distance != null && (
+                  <p className="muted small">straight line · GPS accuracy ±{Math.round(self.accuracy)} m</p>
+                )}
+              </>
+            )}
+          </section>
+
           <h3>Members</h3>
           <ul className="member-list">
             {session.members.map((m) => {
@@ -107,6 +143,14 @@ export function SessionPage() {
                 <li key={m.user_id}>
                   <strong>{m.user_id === user.id ? 'You' : members[m.user_id]}</strong>
                   {m.role === 'owner' && <span className="badge">owner</span>}
+                  {m.user_id !== user.id && (
+                    <button
+                      className="link-btn small"
+                      onClick={() => setTarget({ type: 'member', userId: m.user_id })}
+                    >
+                      {target?.userId === m.user_id ? 'target' : 'set as target'}
+                    </button>
+                  )}
                   <div className="muted small">
                     {p ? `updated ${new Date(p.recordedAt).toLocaleTimeString()}` : 'no location yet'}
                   </div>
@@ -141,7 +185,15 @@ export function SessionPage() {
         </aside>
 
         <section className="map-wrap">
-          <LiveMap positions={positions} names={members} selfId={user.id} />
+          <LiveMap
+            positions={positions}
+            names={members}
+            selfId={user.id}
+            target={targetPoint}
+            targetIsMember={target?.type === 'member'}
+            distance={distance}
+            onPickTarget={(pt) => setTarget({ type: 'point', ...pt })}
+          />
         </section>
       </main>
     </>

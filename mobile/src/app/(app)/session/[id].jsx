@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, ScrollView, Share, Text, View } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import MapView, { Circle, Marker } from 'react-native-maps';
+import MapView, { Circle, Marker, Polyline } from 'react-native-maps';
 import { api } from '../../../lib/api.js';
 import { useAuth } from '../../../auth/AuthProvider.jsx';
 import { useTrackingSession } from '../../../tracking/useTrackingSession.js';
 import { useDeviceLocation } from '../../../tracking/useDeviceLocation.js';
 import { Button } from '../../../components/Button.jsx';
 import { colors, ui } from '../../../ui.js';
+import { bearingDegrees, compassDirection, distanceMeters, formatDistance } from '../../../lib/geo.js';
 
 const COLORS = ['#2563eb', '#dc2626', '#16a34a', '#9333ea', '#ea580c', '#0891b2', '#db2777', '#65a30d'];
 function colorFor(userId) {
@@ -22,6 +23,8 @@ export default function SessionScreen() {
   const [session, setSession] = useState(null);
   const [loadError, setLoadError] = useState(null);
   const [sharing, setSharing] = useState(false);
+  // {type:'point', lat, lng} | {type:'member', userId} | null
+  const [target, setTarget] = useState(null);
   const mapRef = useRef(null);
   const fitted = useRef(false);
   const requested = useRef(new Set());
@@ -67,6 +70,12 @@ export default function SessionScreen() {
   );
   const points = Object.values(positions);
 
+  // A member target follows that member as their location updates.
+  const self = positions[user.id];
+  const targetPoint = target?.type === 'member' ? positions[target.userId] : target;
+  const distance = self && targetPoint ? distanceMeters(self, targetPoint) : null;
+  const targetLabel = target?.type === 'member' ? names[target.userId] || 'Member' : 'Map point';
+
   // Fit the camera to everyone the first time positions arrive.
   useEffect(() => {
     if (fitted.current || !points.length || !mapRef.current) return;
@@ -96,7 +105,30 @@ export default function SessionScreen() {
         ref={mapRef}
         style={{ flex: 1 }}
         initialRegion={{ latitude: 20, longitude: 0, latitudeDelta: 100, longitudeDelta: 100 }}
+        onLongPress={(e) => {
+          const { latitude, longitude } = e.nativeEvent.coordinate;
+          setTarget({ type: 'point', lat: latitude, lng: longitude });
+        }}
       >
+        {self && targetPoint && (
+          <Polyline
+            coordinates={[
+              { latitude: self.lat, longitude: self.lng },
+              { latitude: targetPoint.lat, longitude: targetPoint.lng },
+            ]}
+            strokeColor="#111827"
+            strokeWidth={3}
+            lineDashPattern={[8, 8]}
+          />
+        )}
+        {target?.type === 'point' && (
+          <Marker
+            coordinate={{ latitude: target.lat, longitude: target.lng }}
+            title="Target"
+            description={distance != null ? formatDistance(distance) : undefined}
+            pinColor="#111827"
+          />
+        )}
         {points.map((p) => {
           const color = colorFor(p.userId);
           const label = p.userId === user.id ? 'You' : names[p.userId] || 'Member';
@@ -144,6 +176,37 @@ export default function SessionScreen() {
             onPress={() => setSharing((s) => !s)}
           />
         )}
+        <View style={[ui.card, { gap: 4 }]}>
+          <View style={[ui.row, { justifyContent: 'space-between' }]}>
+            <Text style={ui.h2}>Distance</Text>
+            {target && (
+              <Text style={[ui.small, { color: colors.primary }]} onPress={() => setTarget(null)}>
+                Clear
+              </Text>
+            )}
+          </View>
+          {!target ? (
+            <Text style={[ui.muted, ui.small]}>Long-press the map, or pick a member below, to set a target.</Text>
+          ) : (
+            <>
+              <Text style={ui.small}>To {targetLabel}</Text>
+              {distance != null ? (
+                <Text style={{ fontSize: 28, fontWeight: '700', fontVariant: ['tabular-nums'], color: colors.text }}>
+                  {formatDistance(distance)}
+                  <Text style={[ui.muted, ui.small]}> {compassDirection(bearingDegrees(self, targetPoint))}</Text>
+                </Text>
+              ) : (
+                <Text style={[ui.muted, ui.small]}>
+                  {!self ? 'Waiting for your location…' : 'Waiting for their location…'}
+                </Text>
+              )}
+              {self?.accuracy > 0 && distance != null && (
+                <Text style={[ui.muted, ui.small]}>straight line · GPS accuracy ±{Math.round(self.accuracy)} m</Text>
+              )}
+            </>
+          )}
+        </View>
+
         {geo.error && <Text style={[ui.error, ui.small]}>{geo.error}</Text>}
         {live.error && <Text style={[ui.error, ui.small]}>{live.error}</Text>}
 
@@ -160,6 +223,14 @@ export default function SessionScreen() {
                 <Text style={[ui.muted, ui.small]}>
                   {p ? `updated ${new Date(p.recordedAt).toLocaleTimeString()}` : 'no location yet'}
                 </Text>
+                {m.user_id !== user.id && (
+                  <Text
+                    style={[ui.small, { color: colors.primary }]}
+                    onPress={() => setTarget({ type: 'member', userId: m.user_id })}
+                  >
+                    {target?.userId === m.user_id ? 'Target' : 'Set as target'}
+                  </Text>
+                )}
               </View>
             );
           })}
