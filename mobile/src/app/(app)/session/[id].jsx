@@ -11,6 +11,7 @@ import { colors, ui } from '../../../ui.js';
 import { bearingDegrees, compassDirection, distanceMeters, formatDistance } from '../../../lib/geo.js';
 import { TRAVEL_MODES, formatDuration } from '../../../lib/route.js';
 import { useRoute } from '../../../tracking/useRoute.js';
+import { useSmoothedPosition } from '../../../tracking/useSmoothedPosition.js';
 
 const COLORS = ['#2563eb', '#dc2626', '#16a34a', '#9333ea', '#ea580c', '#0891b2', '#db2777', '#65a30d'];
 function colorFor(userId) {
@@ -74,8 +75,16 @@ export default function SessionScreen() {
   const points = Object.values(positions);
 
   // A member target follows that member as their location updates.
-  const self = positions[user.id];
-  const targetPoint = target?.type === 'member' ? positions[target.userId] : target;
+  // Predicted between GPS fixes so distance and markers move continuously.
+  const self = useSmoothedPosition(positions[user.id]);
+  const memberTarget = useSmoothedPosition(target?.type === 'member' ? positions[target.userId] : null);
+  const targetPoint = target?.type === 'member' ? memberTarget : target;
+  const mapPositions = useMemo(() => {
+    const next = { ...positions };
+    if (self) next[user.id] = self;
+    if (memberTarget) next[target.userId] = memberTarget;
+    return next;
+  }, [positions, self, memberTarget, user.id, target]);
   const straight = self && targetPoint ? distanceMeters(self, targetPoint) : null;
   const nav = useRoute(self, targetPoint, travelMode);
   // Road distance when we have a route, straight line otherwise.
@@ -151,7 +160,7 @@ export default function SessionScreen() {
             pinColor="#111827"
           />
         )}
-        {points.map((p) => {
+        {Object.values(mapPositions).map((p) => {
           const color = colorFor(p.userId);
           const label = p.userId === user.id ? 'You' : names[p.userId] || 'Member';
           const coordinate = { latitude: p.lat, longitude: p.lng };

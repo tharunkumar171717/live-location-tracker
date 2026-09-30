@@ -9,6 +9,7 @@ import { useGeolocation } from '../tracking/useGeolocation.js';
 import { bearingDegrees, compassDirection, distanceMeters, formatDistance } from '../lib/geo.js';
 import { TRAVEL_MODES, formatDuration } from '../lib/route.js';
 import { useRoute } from '../tracking/useRoute.js';
+import { useSmoothedPosition } from '../tracking/useSmoothedPosition.js';
 
 export function SessionPage() {
   const { sessionId } = useParams();
@@ -68,8 +69,16 @@ export function SessionPage() {
   );
 
   // A member target follows that member as their location updates.
-  const self = positions[user.id];
-  const targetPoint = target?.type === 'member' ? positions[target.userId] : target;
+  // Predicted between GPS fixes so distance and markers move continuously.
+  const self = useSmoothedPosition(positions[user.id]);
+  const memberTarget = useSmoothedPosition(target?.type === 'member' ? positions[target.userId] : null);
+  const targetPoint = target?.type === 'member' ? memberTarget : target;
+  const mapPositions = useMemo(() => {
+    const next = { ...positions };
+    if (self) next[user.id] = self;
+    if (memberTarget) next[target.userId] = memberTarget;
+    return next;
+  }, [positions, self, memberTarget, user.id, target]);
   const straight = self && targetPoint ? distanceMeters(self, targetPoint) : null;
   const nav = useRoute(self, targetPoint, travelMode);
   // Road distance when we have a route, straight line otherwise.
@@ -233,7 +242,7 @@ export function SessionPage() {
 
         <section className="map-wrap">
           <LiveMap
-            positions={positions}
+            positions={mapPositions}
             names={members}
             selfId={user.id}
             target={targetPoint}
