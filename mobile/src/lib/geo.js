@@ -27,8 +27,9 @@ export function compassDirection(degrees) {
   return DIRECTIONS[Math.round(degrees / 45) % 8];
 }
 
+// Metre precision up to 100 km so the number visibly moves as you walk.
 export function formatDistance(meters) {
   if (meters < 1000) return `${Math.round(meters)} m`;
-  if (meters < 10_000) return `${(meters / 1000).toFixed(2)} km`;
-  return `${(meters / 1000).toFixed(1)} km`;
+  if (meters < 100_000) return `${(meters / 1000).toFixed(3)} km`;
+  return `${Math.round(meters / 1000)} km`;
 }

@@ -243,9 +243,9 @@ export default function SessionScreen() {
               ) : nav.progress ? (
                 <>
                   <Text style={{ fontSize: 28, fontWeight: '700', fontVariant: ['tabular-nums'], color: colors.text }}>
-                    {formatDuration(nav.progress.eta)}
+                    {formatDistance(nav.progress.remaining)}
                     <Text style={{ fontSize: 18, fontWeight: '600', color: colors.muted }}>
-                      {' '}· {formatDistance(nav.progress.remaining)}
+                      {' '}· {formatDuration(nav.progress.eta)}
                     </Text>
                   </Text>
                   <Text style={[ui.muted, ui.small]}>

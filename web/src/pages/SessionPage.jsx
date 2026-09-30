@@ -153,8 +153,8 @@ export function SessionPage() {
                 ) : nav.progress ? (
                   <>
                     <p className="distance">
-                      {formatDuration(nav.progress.eta)}
-                      <span className="distance-sub"> · {formatDistance(nav.progress.remaining)}</span>
+                      {formatDistance(nav.progress.remaining)}
+                      <span className="distance-sub"> · {formatDuration(nav.progress.eta)}</span>
                     </p>
                     <p className="muted small">
                       by road{nav.rerouting ? ' · rerouting…' : ''} · {formatDistance(straight)} straight line{' '}

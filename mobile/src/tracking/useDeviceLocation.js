@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import * as Location from 'expo-location';
 
 // Foreground GPS while `enabled`. Calls onPosition (if given) at most every `minIntervalMs`.
-export function useDeviceLocation({ enabled, onPosition, minIntervalMs = 3000 }) {
+export function useDeviceLocation({ enabled, onPosition, minIntervalMs = 1200 }) {
   const [error, setError] = useState(null);
   const [current, setCurrent] = useState(null);
   const callback = useRef(onPosition);

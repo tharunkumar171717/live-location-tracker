@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 // Watches the browser's GPS while `enabled`, calling onPosition (if given) at
 // most every `minIntervalMs`. Geolocation needs a secure context (https or localhost).
-export function useGeolocation({ enabled, onPosition, minIntervalMs = 3000 }) {
+export function useGeolocation({ enabled, onPosition, minIntervalMs = 1200 }) {
   const [error, setError] = useState(null);
   const [current, setCurrent] = useState(null);
   const lastSent = useRef(0);
