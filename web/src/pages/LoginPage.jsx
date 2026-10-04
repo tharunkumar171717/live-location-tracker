@@ -1,8 +1,13 @@
 import { useState } from 'react';
 import { useAuth } from '../auth/AuthProvider.jsx';
+import { GoogleSignInButton } from '../components/GoogleSignInButton.jsx';
+
+// With a client ID, Google signs in on this page and shows our own domain.
+// Without one, fall back to the Supabase redirect flow.
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 export function LoginPage() {
-  const { signInWithGoogle, signInWithPassword, signUp } = useAuth();
+  const { signInWithGoogle, signInWithGoogleIdToken, signInWithPassword, signUp } = useAuth();
   const [mode, setMode] = useState('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -16,6 +21,17 @@ export function LoginPage() {
     setBusy(true);
     const { error } = await signInWithGoogle();
     // On success the browser navigates to Google, so only errors land here.
+    if (error) {
+      setError(error.message);
+      setBusy(false);
+    }
+  }
+
+  async function onGoogleCredential(credential, nonce) {
+    setError(null);
+    setBusy(true);
+    const { error } = await signInWithGoogleIdToken(credential, nonce);
+    // On success AuthProvider picks up the session; PublicOnlyRoute redirects.
     if (error) {
       setError(error.message);
       setBusy(false);
@@ -50,9 +66,17 @@ export function LoginPage() {
         <h1>G-Map</h1>
         <p className="muted">Live location sharing</p>
 
-        <button className="btn btn-google" onClick={onGoogle} disabled={busy}>
-          <GoogleIcon /> Continue with Google
-        </button>
+        {GOOGLE_CLIENT_ID ? (
+          <GoogleSignInButton
+            clientId={GOOGLE_CLIENT_ID}
+            onCredential={onGoogleCredential}
+            onError={(err) => setError(err.message)}
+          />
+        ) : (
+          <button className="btn btn-google" onClick={onGoogle} disabled={busy}>
+            <GoogleIcon /> Continue with Google
+          </button>
+        )}
 
         <div className="divider"><span>or</span></div>
 

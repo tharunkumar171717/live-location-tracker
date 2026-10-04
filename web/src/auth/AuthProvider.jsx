@@ -53,6 +53,8 @@ export function AuthProvider({ children }) {
           provider: 'google',
           options: { redirectTo: `${window.location.origin}/auth/callback` },
         }),
+      signInWithGoogleIdToken: (token, nonce) =>
+        supabase.auth.signInWithIdToken({ provider: 'google', token, nonce }),
       signInWithPassword: (email, password) => supabase.auth.signInWithPassword({ email, password }),
       signUp: (email, password, fullName) =>
         supabase.auth.signUp({

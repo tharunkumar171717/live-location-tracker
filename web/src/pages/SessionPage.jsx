@@ -247,6 +247,23 @@ export function SessionPage() {
         </aside>
 
         <section className="map-wrap">
+          {/* On phones the sidebar's distance card is scrolled out of view while
+              you use the map, so repeat the key numbers on top of the map. */}
+          {target && (
+            <div className="map-distance">
+              <div>
+                <strong>
+                  {distance != null ? formatDistance(distance) : !self ? 'Waiting for your location…' : 'Waiting…'}
+                </strong>
+                {nav.progress && <span> · {formatDuration(nav.progress.eta)}</span>}
+                <div className="small">
+                  to {targetLabel}
+                  {distance != null && !nav.progress ? ' · straight line' : ''}
+                </div>
+              </div>
+              <button className="link-btn small" onClick={() => setTarget(null)}>clear</button>
+            </div>
+          )}
           <LiveMap
             positions={mapPositions}
             names={members}

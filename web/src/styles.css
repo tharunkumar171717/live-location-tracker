@@ -42,6 +42,7 @@ input:focus { outline: 2px solid var(--primary); outline-offset: -1px; }
 .btn-danger { background: #fff; color: var(--danger); border-color: var(--danger); }
 .btn-ghost { background: transparent; border-color: transparent; }
 .btn-google { width: 100%; font-weight: 500; }
+.google-button { width: 100%; min-height: 44px; display: flex; justify-content: center; }
 .link { background: none; border: 0; padding: 0; font: inherit; color: var(--primary); cursor: pointer; }
 
 .auth-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; }
@@ -70,12 +71,19 @@ input:focus { outline: 2px solid var(--primary); outline-offset: -1px; }
 
 .session-layout { display: grid; grid-template-columns: 300px 1fr; gap: 16px; padding: 16px; height: calc(100vh - 53px); }
 .sidebar { overflow-y: auto; }
-.map-wrap { border-radius: 12px; overflow: hidden; border: 1px solid var(--border); min-height: 360px; }
+.map-wrap { position: relative; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); min-height: 360px; }
 .map { height: 100%; width: 100%; }
+.map-distance {
+  display: none; position: absolute; top: 10px; left: 56px; right: 10px; z-index: 1000;
+  align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px;
+  background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+.map-distance strong { font-size: 1.15rem; font-variant-numeric: tabular-nums; }
 
 @media (max-width: 720px) {
   .session-layout { grid-template-columns: 1fr; height: auto; }
   .map-wrap { height: 60vh; }
+  .map-distance { display: flex; }
 }
 
 .target-card { border: 1px solid var(--border); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 4px; }
