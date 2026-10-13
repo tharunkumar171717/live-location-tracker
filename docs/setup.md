@@ -36,8 +36,8 @@ retention, demo mode, `REDIS_URL`, `METRICS_TOKEN`.
 | Part | Host | Settings |
 |---|---|---|
 | Web | Vercel | Project root `web/`. Env: `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_API_URL=https://<api-domain>`, `VITE_WS_URL=wss://<api-domain>/ws`, optional `VITE_GOOGLE_CLIENT_ID` |
-| API | Railway | Root `server/` (see `railway.json`, health check `/ready`). Env: `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `DB_SSL=true`, `DB_SSL_REJECT_UNAUTHORIZED=false`, `CORS_ORIGINS=https://<web-domain>`. Railway sets `PORT`. |
-| Redis | Railway (optional) | Add a Redis service and set `REDIS_URL` on the API only when you run more than one API replica. |
+| API | Render (or Railway, see `railway.json`) | Root `server/`, start `npm start`, health check `/ready`. Env: `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `DB_SSL=true`, `DB_SSL_REJECT_UNAUTHORIZED=false`, `CORS_ORIGINS=https://<web-domain>`. The host sets `PORT`. |
+| Redis | optional | Add a Redis instance (e.g. Render Key Value) and set `REDIS_URL` only when you run more than one API instance. |
 
 Supabase's redirect URLs must include `https://<web-domain>/auth/callback`.
 

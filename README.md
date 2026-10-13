@@ -81,7 +81,7 @@ flowchart LR
 ```
 
 - **Web** (`web/`): React 19 + Vite, Leaflet/OpenStreetMap, Supabase Auth. Deployed on Vercel.
-- **API** (`server/`): Express 5 REST + `ws` WebSocket hub, PostgreSQL via `pg`. Deployed on Railway.
+- **API** (`server/`): Express 5 REST + `ws` WebSocket hub, PostgreSQL via `pg`. Deployed on Render.
 - **Bus** (`server/src/bus.js`): in-process by default; set `REDIS_URL` and every instance shares events.
 
 Each socket sends `{type:"auth", token}` as its first message (never in the URL, so tokens stay out of
@@ -182,7 +182,7 @@ deploy/nginx-lb.conf      load balancer for the two-instance compose stack
 | Part | Host | Notes |
 |---|---|---|
 | Web | Vercel | root `web/`; SPA rewrites in `vercel.json` |
-| API | Railway | root `server/`; health check on `/ready` |
+| API | Render | root `server/`; health check on `/ready` |
 | Database + auth | Supabase | run `npm run migrate` from `server/` |
 | Redis | optional | only needed for more than one API instance |
 
