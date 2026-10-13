@@ -1,0 +1,87 @@
+<!doctype html>
+<!-- Source for web/public/og-image.png and docs/assets/banner.png.
+     Render: chromium --headless --window-size=1200,630 --screenshot=og.png og-card.html -->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; width: 1200px; height: 630px; overflow: hidden; }
+  body {
+    font-family: Inter, 'Segoe UI', Roboto, system-ui, sans-serif;
+    background: linear-gradient(135deg, #0b1f4d 0%, #0f3d63 55%, #0d5c57 100%);
+    color: #fff; display: flex;
+  }
+  .left { width: 540px; padding: 72px 0 0 72px; display: flex; flex-direction: column; gap: 22px; }
+  .brand { display: flex; align-items: center; gap: 18px; }
+  .brand img { width: 84px; height: 84px; }
+  h1 { font-size: 76px; margin: 0; letter-spacing: -2px; }
+  .tag { font-size: 28px; line-height: 1.3; color: #cfe3ff; margin: 0; }
+  .chips { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+  .chip { font-size: 19px; padding: 8px 14px; border-radius: 999px; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.22); }
+  .stack { position: absolute; left: 72px; bottom: 50px; font-size: 18px; color: #9fb7d8; letter-spacing: 0.3px; }
+  .map { position: absolute; right: 0; top: 0; width: 560px; height: 630px; }
+</style>
+</head>
+<body>
+  <div class="left">
+    <div class="brand"><img src="../../web/public/logo.svg" alt=""><h1>G-Map</h1></div>
+    <p class="tag">Live location sharing with road routes, ETA, zone alerts and trip replay.</p>
+    <div class="chips">
+      <span class="chip">Real-time WebSockets</span>
+      <span class="chip">Redis scale-out</span>
+      <span class="chip">Offline sync</span>
+      <span class="chip">Geofences</span>
+      <span class="chip">PWA</span>
+    </div>
+  </div>
+  <div class="stack">React · Node.js · WebSockets · PostgreSQL · Redis · Leaflet</div>
+
+  <svg class="map" viewBox="40 0 560 630" preserveAspectRatio="xMidYMid slice">
+    <defs>
+      <linearGradient id="fade" x1="0" x2="1">
+        <stop offset="0" stop-color="#0f3d63" stop-opacity="1"/>
+        <stop offset="0.25" stop-color="#0f3d63" stop-opacity="0"/>
+      </linearGradient>
+      <filter id="glow"><feGaussianBlur stdDeviation="6"/></filter>
+    </defs>
+    <rect width="640" height="630" fill="#eaf1f7"/>
+    <!-- blocks -->
+    <g fill="#dbe6ef">
+      <rect x="40" y="40" width="150" height="110" rx="10"/><rect x="230" y="30" width="170" height="130" rx="10"/>
+      <rect x="440" y="50" width="180" height="120" rx="10"/><rect x="60" y="200" width="130" height="160" rx="10"/>
+      <rect x="250" y="210" width="120" height="120" rx="10"/><rect x="420" y="230" width="190" height="150" rx="10"/>
+      <rect x="40" y="410" width="170" height="180" rx="10"/><rect x="260" y="390" width="150" height="200" rx="10"/>
+      <rect x="450" y="430" width="170" height="170" rx="10"/>
+    </g>
+    <rect x="232" y="352" width="160" height="40" rx="8" fill="#cde8d4"/>
+    <!-- roads -->
+    <g stroke="#fff" stroke-width="22" fill="none" stroke-linecap="round">
+      <path d="M0 180 H640"/><path d="M0 385 C 200 370, 420 410, 640 400"/>
+      <path d="M215 0 V630"/><path d="M410 0 C 400 200, 430 420, 420 630"/>
+    </g>
+    <!-- zone -->
+    <circle cx="470" cy="300" r="78" fill="#14b8a6" fill-opacity="0.14" stroke="#0d9488" stroke-width="4" stroke-dasharray="12 10"/>
+    <text x="470" y="236" text-anchor="middle" font-size="18" font-weight="700" fill="#0f766e">Office</text>
+    <!-- route -->
+    <path d="M215 560 V385 C 300 378, 380 392, 410 395 C 415 360, 418 330, 450 310" fill="none" stroke="#fff" stroke-width="14" stroke-linecap="round"/>
+    <path d="M215 560 V385 C 300 378, 380 392, 410 395 C 415 360, 418 330, 450 310" fill="none" stroke="#1a73e8" stroke-width="8" stroke-linecap="round"/>
+    <!-- riders -->
+    <g stroke="#fff" stroke-width="5">
+      <circle cx="215" cy="470" r="15" fill="#2563eb"/>
+      <circle cx="560" cy="180" r="15" fill="#dc2626"/>
+      <circle cx="120" cy="180" r="15" fill="#16a34a"/>
+    </g>
+    <g font-size="17" font-weight="700" fill="#111827">
+      <rect x="232" y="455" width="56" height="30" rx="6" fill="#fff"/><text x="245" y="476">You</text>
+      <rect x="414" y="134" width="124" height="30" rx="6" fill="#fff"/><text x="425" y="155">Ravi · 18 km/h</text>
+    </g>
+    <!-- toast -->
+    <g>
+      <rect x="250" y="560" width="300" height="46" rx="23" fill="#16a34a"/>
+      <rect x="256" y="560" width="294" height="46" rx="23" fill="#fff"/>
+      <text x="400" y="590" text-anchor="middle" font-size="18" font-weight="700" fill="#111827">📍 Asha arrived at Office</text>
+    </g>
+    <rect x="40" width="560" height="630" fill="url(#fade)"/>
+  </svg>
+</body>
+</html>

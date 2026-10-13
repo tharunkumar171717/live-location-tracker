@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider.jsx';
 import { GoogleSignInButton } from '../components/GoogleSignInButton.jsx';
 
@@ -7,7 +8,8 @@ import { GoogleSignInButton } from '../components/GoogleSignInButton.jsx';
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 export function LoginPage() {
-  const { signInWithGoogle, signInWithGoogleIdToken, signInWithPassword, signUp } = useAuth();
+  const { signInWithGoogle, signInWithGoogleIdToken, signInWithPassword, signUp, signInAsGuest } = useAuth();
+  const navigate = useNavigate();
   const [mode, setMode] = useState('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -38,6 +40,22 @@ export function LoginPage() {
     }
   }
 
+  async function onGuest() {
+    setError(null);
+    setBusy(true);
+    // After sign-in, PublicOnlyRoute sends us to state.from: the demo starter.
+    navigate('/login', { replace: true, state: { from: '/start-demo' } });
+    const { error } = await signInAsGuest();
+    if (error) {
+      setError(
+        /anonymous/i.test(error.message)
+          ? 'Guest mode is turned off on this server. Watch the live demo instead.'
+          : error.message,
+      );
+      setBusy(false);
+    }
+  }
+
   async function onSubmit(e) {
     e.preventDefault();
     setError(null);
@@ -63,8 +81,25 @@ export function LoginPage() {
   return (
     <div className="auth-page">
       <div className="card auth-card">
-        <h1>G-Map</h1>
-        <p className="muted">Live location sharing</p>
+        <div className="auth-brand">
+          <img src="/logo.svg" alt="" width="48" height="48" />
+          <div>
+            <h1>G-Map</h1>
+            <p className="muted">Live location sharing</p>
+          </div>
+        </div>
+
+        <div className="demo-box">
+          <p className="small">
+            <strong>Just looking?</strong> Watch simulated riders move around Bengaluru in real time, no sign-in.
+          </p>
+          <div className="row">
+            <Link className="btn btn-primary" to="/demo">Watch live demo</Link>
+            <button className="btn" onClick={onGuest} disabled={busy}>Try as guest</button>
+          </div>
+        </div>
+
+        <div className="divider"><span>or sign in</span></div>
 
         {GOOGLE_CLIENT_ID ? (
           <GoogleSignInButton

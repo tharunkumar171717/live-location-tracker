@@ -56,6 +56,9 @@ export function AuthProvider({ children }) {
       signInWithGoogleIdToken: (token, nonce) =>
         supabase.auth.signInWithIdToken({ provider: 'google', token, nonce }),
       signInWithPassword: (email, password) => supabase.auth.signInWithPassword({ email, password }),
+      // "Try as guest": a real Supabase session with no email. Needs anonymous
+      // sign-ins enabled in Supabase (Authentication -> Sign In / Providers).
+      signInAsGuest: () => supabase.auth.signInAnonymously(),
       signUp: (email, password, fullName) =>
         supabase.auth.signUp({
           email,

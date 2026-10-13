@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
+import { createSendPolicy } from './sendPolicy.js';
 
-// Watches the browser's GPS while `enabled`, calling onPosition (if given) at
-// most every `minIntervalMs`. Geolocation needs a secure context (https or localhost).
+// Watches the browser's GPS while `enabled`. Every fix updates `current` (so
+// your own marker is always live); onPosition is only called for fixes the
+// battery-aware send policy picks. Needs a secure context (https or localhost).
 //
 // watchPosition only fires when the browser thinks the position changed, and
 // some phones go quiet for long stretches. If no fix arrives for POLL_MS we
@@ -9,12 +11,20 @@ import { useEffect, useRef, useState } from 'react';
 const POLL_MS = 3000;
 const OPTIONS = { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 };
 
-export function useGeolocation({ enabled, onPosition, minIntervalMs = 1200 }) {
+export function useGeolocation({ enabled, onPosition }) {
   const [error, setError] = useState(null);
   const [current, setCurrent] = useState(null);
-  const lastSent = useRef(0);
+  const [mode, setMode] = useState('moving');
   const callback = useRef(onPosition);
   callback.current = onPosition;
+  const policy = useRef(null);
+  policy.current ||= createSendPolicy();
+
+  // Start each sharing stint with an immediate send.
+  const sharing = Boolean(onPosition);
+  useEffect(() => {
+    if (sharing) policy.current.reset();
+  }, [sharing]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -23,7 +33,6 @@ export function useGeolocation({ enabled, onPosition, minIntervalMs = 1200 }) {
       return;
     }
     setError(null);
-    lastSent.current = 0;
 
     let lastFixAt = Date.now();
     const onFix = (pos) => {
@@ -38,10 +47,10 @@ export function useGeolocation({ enabled, onPosition, minIntervalMs = 1200 }) {
         timestamp: pos.timestamp,
       };
       setCurrent(loc);
-      if (callback.current && Date.now() - lastSent.current >= minIntervalMs) {
-        lastSent.current = Date.now();
-        callback.current?.(loc);
-      }
+      if (!callback.current) return;
+      const decision = policy.current.check(loc, { hidden: document.visibilityState === 'hidden' });
+      setMode(decision.mode);
+      if (decision.send) callback.current(loc);
     };
     const onError = (err) => {
       // Timeouts are transient (e.g. indoors); keep the last fix and retry.
@@ -62,7 +71,7 @@ export function useGeolocation({ enabled, onPosition, minIntervalMs = 1200 }) {
       navigator.geolocation.clearWatch(id);
       clearInterval(poll);
     };
-  }, [enabled, minIntervalMs]);
+  }, [enabled]);
 
-  return { error, current };
+  return { error, current, mode };
 }
