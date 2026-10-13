@@ -44,7 +44,7 @@ export function client(base, token) {
       body: body ? JSON.stringify(body) : undefined,
     });
     const text = await res.text();
-    let data = null;
+    let data;
     try {
       data = text ? JSON.parse(text) : null;
     } catch {

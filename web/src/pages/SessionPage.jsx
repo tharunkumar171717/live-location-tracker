@@ -45,12 +45,13 @@ export function SessionPage() {
   }, [sharing, sendLocation]);
 
   // Your own marker comes straight from the device, not the server round trip.
+  const ownFix = geo.current;
   const positions = useMemo(
     () =>
-      geo.current
-        ? { ...live.positions, [user.id]: { userId: user.id, ...geo.current, recordedAt: geo.current.timestamp } }
+      ownFix
+        ? { ...live.positions, [user.id]: { userId: user.id, ...ownFix, recordedAt: ownFix.timestamp } }
         : live.positions,
-    [live.positions, geo.current, user.id],
+    [live.positions, ownFix, user.id],
   );
 
   useEffect(() => {
