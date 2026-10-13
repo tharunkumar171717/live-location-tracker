@@ -1,7 +1,0 @@
-node_modules
-dist
-dev-dist
-.env
-.env.local
-test-results
-playwright-report

@@ -65,16 +65,6 @@ export function DashboardPage() {
 
         {error && <p className="error">{error}</p>}
 
-        <section className="card demo-banner">
-          <div>
-            <h2>New here?</h2>
-            <p className="muted small">
-              Start a demo session: three simulated riders, two zones with arrival alerts, and trip replay.
-            </p>
-          </div>
-          <Link className="btn btn-primary" to="/start-demo">Start demo session</Link>
-        </section>
-
         <section className="card">
           <h2>Your sessions</h2>
           {sessions === null ? (
@@ -87,7 +77,6 @@ export function DashboardPage() {
                 <li key={s.id}>
                   <Link to={`/sessions/${s.id}`}>{s.name}</Link>
                   <span className={`badge ${s.status}`}>{s.status}</span>
-                  {s.is_demo && <span className="badge demo">demo</span>}
                   <span className="muted small">
                     {s.member_count} member{s.member_count === 1 ? '' : 's'} · {s.role}
                   </span>

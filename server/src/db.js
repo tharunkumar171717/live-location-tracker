@@ -1,6 +1,5 @@
 import pg from 'pg';
 import { config } from './config.js';
-import { logger } from './logger.js';
 
 const { connectionString, ...discrete } = config.db;
 
@@ -11,7 +10,7 @@ export const pool = new pg.Pool(
 );
 
 pool.on('error', (err) => {
-  logger.error({ err }, 'db idle client error');
+  console.error('[db] idle client error', err);
 });
 
 export function query(text, params) {

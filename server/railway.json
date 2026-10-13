@@ -3,7 +3,7 @@
   "build": { "builder": "RAILPACK" },
   "deploy": {
     "startCommand": "npm start",
-    "healthcheckPath": "/ready",
+    "healthcheckPath": "/health",
     "healthcheckTimeout": 60,
     "restartPolicyType": "ON_FAILURE"
   }
