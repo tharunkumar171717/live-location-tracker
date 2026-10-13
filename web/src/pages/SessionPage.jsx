@@ -1,11 +1,15 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../lib/api.js';
 import { useAuth } from '../auth/AuthProvider.jsx';
 import { Header } from '../components/Header.jsx';
 import { LiveMap } from '../components/LiveMap.jsx';
+import { SharePanel } from '../components/SharePanel.jsx';
+import { ZonesPanel } from '../components/ZonesPanel.jsx';
+import { AlertFeed, AlertToast } from '../components/AlertFeed.jsx';
 import { useTrackingSession } from '../tracking/useTrackingSession.js';
 import { useGeolocation } from '../tracking/useGeolocation.js';
+import { useWakeLock } from '../tracking/useWakeLock.js';
 import { bearingDegrees, compassDirection, distanceMeters, formatDistance } from '../lib/geo.js';
 import { TRAVEL_MODES, formatDuration } from '../lib/route.js';
 import { useRoute } from '../tracking/useRoute.js';
@@ -18,15 +22,20 @@ export function SessionPage() {
   const [session, setSession] = useState(null);
   const [loadError, setLoadError] = useState(null);
   const [sharing, setSharing] = useState(false);
+  const [keepAwake, setKeepAwake] = useState(true);
   // {type:'point', lat, lng} | {type:'member', userId} | null
   const [target, setTarget] = useState(null);
   const [travelMode, setTravelMode] = useState('car');
+  const [zones, setZones] = useState([]);
+  const [draft, setDraft] = useState(null); // zone being placed
+  const [zoneError, setZoneError] = useState(null);
 
   const live = useTrackingSession(sessionId);
   const ended = live.ended || session?.status === 'ended';
   // GPS runs whenever the session is open so you always see yourself on the
   // map; positions are only sent to the server while sharing.
   const geo = useGeolocation({ enabled: !ended, onPosition: sharing ? live.sendLocation : undefined });
+  const wake = useWakeLock(sharing && keepAwake && !ended);
 
   // Send the fix we already have as soon as sharing starts.
   const { sendLocation } = live;
@@ -36,17 +45,28 @@ export function SessionPage() {
   }, [sharing, sendLocation]);
 
   // Your own marker comes straight from the device, not the server round trip.
+  const ownFix = geo.current;
   const positions = useMemo(
     () =>
-      geo.current
-        ? { ...live.positions, [user.id]: { userId: user.id, ...geo.current, recordedAt: geo.current.timestamp } }
+      ownFix
+        ? { ...live.positions, [user.id]: { userId: user.id, ...ownFix, recordedAt: ownFix.timestamp } }
         : live.positions,
-    [live.positions, geo.current, user.id],
+    [live.positions, ownFix, user.id],
   );
 
   useEffect(() => {
     api.getSession(sessionId).then(setSession).catch((e) => setLoadError(e.message));
   }, [sessionId]);
+
+  // Zones load on open and whenever any member changes them.
+  useEffect(() => {
+    api.listGeofences(sessionId).then(setZones).catch(() => {});
+  }, [sessionId, live.zonesVersion]);
+
+  const { seedAlerts } = live;
+  useEffect(() => {
+    api.geofenceEvents(sessionId).then(seedAlerts).catch(() => {});
+  }, [sessionId, seedAlerts]);
 
   // A new member may have joined since we loaded the roster. Refetch once
   // per unknown user (they may also have left, so don't loop).
@@ -94,6 +114,41 @@ export function SessionPage() {
 
   const targetLabel = target?.type === 'member' ? members[target.userId] || 'Member' : 'Map point';
 
+  // Map clicks place the draft zone while adding one, otherwise set a target.
+  const onPick = useCallback(
+    (pt) => {
+      if (draft) setDraft((d) => ({ ...d, ...pt }));
+      else setTarget({ type: 'point', ...pt });
+    },
+    [draft],
+  );
+
+  async function saveZone() {
+    setZoneError(null);
+    try {
+      const zone = await api.createGeofence(sessionId, {
+        name: draft.name.trim(),
+        lat: draft.lat,
+        lng: draft.lng,
+        radiusM: draft.radiusM,
+      });
+      setZones((z) => [...z.filter((x) => x.id !== zone.id), zone]);
+      setDraft(null);
+    } catch (e) {
+      setZoneError(e.message);
+    }
+  }
+
+  async function deleteZone(id) {
+    setZoneError(null);
+    try {
+      await api.deleteGeofence(sessionId, id);
+      setZones((z) => z.filter((x) => x.id !== id));
+    } catch (e) {
+      setZoneError(e.message);
+    }
+  }
+
   if (loadError) {
     return (
       <>
@@ -108,6 +163,7 @@ export function SessionPage() {
   if (!session) return <><Header /><div className="center muted">Loading…</div></>;
 
   const isOwner = session.role === 'owner';
+  const expiresIn = session.expires_at ? Math.max(0, Math.round((new Date(session.expires_at) - now) / 60_000)) : null;
 
   return (
     <>
@@ -115,19 +171,45 @@ export function SessionPage() {
       <main className="session-layout">
         <aside className="card stack sidebar">
           <Link to="/" className="small">← All sessions</Link>
-          <h2>{session.name}</h2>
+          <h2>
+            {session.name}
+            {session.is_demo && <span className="badge demo">demo</span>}
+          </h2>
+          {session.is_demo && !ended && (
+            <p className="hint small">
+              Simulated riders are moving around Bengaluru. Try a zone near them, set one as a target,
+              or open <Link to={`/sessions/${sessionId}/replay`}>Replay</Link> in a minute.
+              {expiresIn != null && ` Ends in ${expiresIn} min.`}
+            </p>
+          )}
           <p className="small">
             Join code <span className="mono code">{session.join_code}</span>
           </p>
-          <p className="small">
+          <p className="small status-line">
             <span className={`dot ${live.status}`} /> {live.status}
             {ended && <span className="badge ended">ended</span>}
+            {sharing && !ended && (
+              <span className="muted">
+                {' '}· {geo.mode === 'idle' ? 'idle, saving battery' : 'moving, live'}
+              </span>
+            )}
           </p>
+          {live.queued > 0 && (
+            <p className="hint small">Offline: {live.queued} point{live.queued === 1 ? '' : 's'} saved, will sync on reconnect.</p>
+          )}
 
           {!ended && (
-            <button className={`btn ${sharing ? '' : 'btn-primary'}`} onClick={() => setSharing((s) => !s)}>
-              {sharing ? 'Stop sharing my location' : 'Share my location'}
-            </button>
+            <>
+              <button className={`btn ${sharing ? '' : 'btn-primary'}`} onClick={() => setSharing((s) => !s)}>
+                {sharing ? 'Stop sharing my location' : 'Share my location'}
+              </button>
+              {sharing && wake.supported && (
+                <label className="check small">
+                  <input type="checkbox" checked={keepAwake} onChange={(e) => setKeepAwake(e.target.checked)} />
+                  Keep screen on while sharing{wake.locked ? ' (on)' : ''}
+                </label>
+              )}
+            </>
           )}
           {geo.error && <p className="error small">{geo.error}</p>}
           {live.error && <p className="error small">{live.error}</p>}
@@ -197,6 +279,24 @@ export function SessionPage() {
             )}
           </section>
 
+          <AlertFeed alerts={live.alerts} names={members} />
+
+          <ZonesPanel
+            zones={zones}
+            draft={draft}
+            disabled={ended}
+            error={zoneError}
+            onStartDraft={() => {
+              setZoneError(null);
+              setDraft({ name: '', radiusM: 150, lat: null, lng: null });
+            }}
+            onDraftChange={(patch) => setDraft((d) => ({ ...d, ...patch }))}
+            onSave={saveZone}
+            onCancel={() => setDraft(null)}
+            onDelete={deleteZone}
+            canDelete={(z) => isOwner || z.created_by === user.id}
+          />
+
           <h3>Members</h3>
           <ul className="member-list">
             {session.members.map((m) => {
@@ -220,6 +320,10 @@ export function SessionPage() {
               );
             })}
           </ul>
+
+          <SharePanel sessionId={sessionId} disabled={ended} />
+
+          <Link className="btn" to={`/sessions/${sessionId}/replay`}>▶ Replay this trip</Link>
 
           {!ended && isOwner && (
             <button
@@ -246,7 +350,7 @@ export function SessionPage() {
           )}
         </aside>
 
-        <section className="map-wrap">
+        <section className={`map-wrap${draft ? ' picking' : ''}`}>
           {/* On phones the sidebar's distance card is scrolled out of view while
               you use the map, so repeat the key numbers on top of the map. */}
           {target && (
@@ -264,6 +368,8 @@ export function SessionPage() {
               <button className="link-btn small" onClick={() => setTarget(null)}>clear</button>
             </div>
           )}
+          {draft && draft.lat == null && <div className="map-hint">Click the map to place the zone</div>}
+          <AlertToast alerts={live.alerts} names={members} />
           <LiveMap
             positions={mapPositions}
             names={members}
@@ -272,7 +378,9 @@ export function SessionPage() {
             targetIsMember={target?.type === 'member'}
             distance={distance}
             routeCoords={nav.progress?.remainingCoords}
-            onPickTarget={(pt) => setTarget({ type: 'point', ...pt })}
+            onPick={onPick}
+            geofences={zones}
+            draftZone={draft?.lat != null ? draft : null}
           />
         </section>
       </main>

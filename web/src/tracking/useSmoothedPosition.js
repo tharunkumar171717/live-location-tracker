@@ -67,3 +67,35 @@ export function useSmoothedPosition(fix) {
   const elapsed = Math.min(Date.now() - motion.receivedAt, MAX_EXTRAPOLATE_MS);
   return { ...fix, ...offset(fix, (motion.speed * elapsed) / 1000, motion.heading) };
 }
+
+// Same prediction for a whole map of positions ({userId: fix}) that carry
+// their own speed and heading (other members, demo riders). One timer for all.
+export function useSmoothedPositions(positions) {
+  const received = useRef(new Map()); // userId -> {key, at}
+  const [, setTick] = useState(0);
+
+  const moving = Object.values(positions).some(
+    (p) => Number.isFinite(p.speed) && p.speed >= MIN_SPEED_MPS && Number.isFinite(p.heading),
+  );
+  useEffect(() => {
+    if (!moving) return;
+    const t = setInterval(() => setTick((n) => n + 1), TICK_MS);
+    return () => clearInterval(t);
+  }, [moving]);
+
+  const now = Date.now();
+  const out = {};
+  for (const [id, p] of Object.entries(positions)) {
+    const key = `${p.lat},${p.lng},${p.recordedAt ?? ''}`;
+    const seen = received.current.get(id);
+    if (!seen || seen.key !== key) received.current.set(id, { key, at: now });
+    const at = received.current.get(id).at;
+    if (Number.isFinite(p.speed) && p.speed >= MIN_SPEED_MPS && Number.isFinite(p.heading)) {
+      const elapsed = Math.min(now - at, MAX_EXTRAPOLATE_MS);
+      out[id] = { ...p, ...offset(p, (p.speed * elapsed) / 1000, p.heading) };
+    } else {
+      out[id] = p;
+    }
+  }
+  return out;
+}
