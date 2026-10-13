@@ -13,24 +13,41 @@ import 'leaflet/dist/leaflet.css';
 import { formatDistance } from '../lib/geo.js';
 
 const COLORS = ['#2563eb', '#dc2626', '#16a34a', '#9333ea', '#ea580c', '#0891b2', '#db2777', '#65a30d'];
+// Each person gets the next unused color the first time they're seen, so up
+// to eight people on one map never share a color (a hash of the id collides).
+const assigned = new Map();
 export function colorFor(userId) {
-  let h = 0;
-  for (const c of userId) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-  return COLORS[h % COLORS.length];
+  if (!assigned.has(userId)) assigned.set(userId, COLORS[assigned.size % COLORS.length]);
+  return assigned.get(userId);
 }
 
 const TARGET_COLOR = '#111827';
 const ROUTE_COLOR = '#1a73e8';
 const ZONE_COLOR = '#0d9488';
 
-// Fit to everyone once the first positions arrive; after that, leave the
-// view alone so the user can pan freely.
-function FitOnFirstData({ points }) {
+// Fit to everyone as people appear (positions often arrive one by one), until
+// the user pans or zooms; after that, leave the view alone.
+function FitToData({ points }) {
   const map = useMap();
-  const fitted = useRef(false);
+  const fitted = useRef(0); // how many points the current view includes
+  const touched = useRef(false);
+
   useEffect(() => {
-    if (fitted.current || points.length === 0) return;
-    fitted.current = true;
+    const el = map.getContainer();
+    const touch = () => (touched.current = true);
+    map.on('dragstart', touch);
+    el.addEventListener('wheel', touch, { passive: true });
+    el.addEventListener('dblclick', touch);
+    return () => {
+      map.off('dragstart', touch);
+      el.removeEventListener('wheel', touch);
+      el.removeEventListener('dblclick', touch);
+    };
+  }, [map]);
+
+  useEffect(() => {
+    if (touched.current || points.length <= fitted.current) return;
+    fitted.current = points.length;
     if (points.length === 1) map.setView([points[0].lat, points[0].lng], 16);
     else map.fitBounds(points.map((p) => [p.lat, p.lng]), { padding: [40, 40], maxZoom: 16 });
   }, [points, map]);
@@ -72,7 +89,7 @@ export function LiveMap({
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      <FitOnFirstData points={fitPoints || points} />
+      <FitToData points={fitPoints || points} />
       {onPick && <PickOnClick onPick={onPick} />}
 
       {geofences.map((z) => (
