@@ -1,46 +1,24 @@
-import http from 'node:http';
-import express from 'express';
-import cors from 'cors';
 import { config } from './config.js';
 import { pool } from './db.js';
-import { api } from './routes/api.js';
-import { attachWebSocketServer } from './ws/hub.js';
+import { logger } from './logger.js';
+import { createServer } from './app.js';
 
-const app = express();
-app.disable('x-powered-by');
-app.use(cors({ origin: config.corsOrigins }));
-app.use(express.json({ limit: '32kb' }));
+const instance = await createServer();
+const port = await instance.listen(config.port);
+logger.info(
+  { port, bus: instance.bus.kind, demo: config.demo.enabled },
+  `API on http://localhost:${port}  WebSocket on ws://localhost:${port}/ws`,
+);
 
-app.get('/health', async (req, res) => {
-  try {
-    await pool.query('select 1');
-    res.json({ ok: true });
-  } catch {
-    res.status(503).json({ ok: false });
-  }
-});
-
-app.use('/api', api);
-
-app.use((req, res) => res.status(404).json({ error: 'Not found' }));
-
-// Express 5 forwards rejected promises from async handlers here.
-app.use((err, req, res, _next) => {
-  const status = err.status || err.statusCode || 500;
-  if (status >= 500) console.error('[http]', err);
-  res.status(status).json({ error: status >= 500 ? 'Internal server error' : err.message });
-});
-
-const server = http.createServer(app);
-attachWebSocketServer(server);
-
-server.listen(config.port, () => {
-  console.log(`API on http://localhost:${config.port}  WebSocket on ws://localhost:${config.port}/ws`);
-});
-
-function shutdown() {
-  server.close(() => pool.end().then(() => process.exit(0)));
+let shuttingDown = false;
+async function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  logger.info({ signal }, 'shutting down');
   setTimeout(() => process.exit(1), 5000).unref();
+  await instance.close();
+  await pool.end();
+  process.exit(0);
 }
-process.on('SIGINT', shutdown);
-process.on('SIGTERM', shutdown);
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));

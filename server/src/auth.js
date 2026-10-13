@@ -23,6 +23,8 @@ function toUser(claims) {
     email: claims.email ?? null,
     fullName: meta.full_name || meta.name || null,
     avatarUrl: meta.avatar_url || meta.picture || null,
+    // Supabase anonymous sign-in ("Try as guest").
+    isAnonymous: claims.is_anonymous === true,
     expiresAt: claims.exp ? claims.exp * 1000 : null,
   };
 }
@@ -37,7 +39,13 @@ async function verifyRemotely(token) {
   const user = await res.json();
   // /user doesn't return exp; read it from the (now validated) payload.
   const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString());
-  return toUser({ ...payload, sub: user.id, email: user.email, user_metadata: user.user_metadata });
+  return toUser({
+    ...payload,
+    sub: user.id,
+    email: user.email,
+    user_metadata: user.user_metadata,
+    is_anonymous: user.is_anonymous,
+  });
 }
 
 export async function verifyAccessToken(token) {
