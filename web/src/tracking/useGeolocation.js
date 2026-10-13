@@ -146,8 +146,13 @@ export function locationHelp(status) {
   if (status === 'denied') {
     return 'Click the icon at the left of the address bar, allow Location, then press Try again.';
   }
+  const desktopLinux = typeof navigator !== 'undefined' && /Linux/.test(navigator.userAgent) && !/Android/.test(navigator.userAgent);
+  if (brave && desktopLinux) {
+    // Brave on Linux ships without any location provider.
+    return 'Brave on Linux cannot detect location. Open this page on your phone, or use Chrome or Firefox.';
+  }
   if (brave) {
-    return 'Brave needs "Use Google services for location" turned on (brave://settings/privacy). Or open this page on your phone.';
+    return 'In Brave, turn on "Use Google services for location" (brave://settings/privacy), or open this page on your phone.';
   }
   return 'Turn on location services for your device and browser, or open this page on your phone.';
 }
