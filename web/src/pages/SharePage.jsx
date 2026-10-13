@@ -78,7 +78,10 @@ export function SharePage() {
 
           <h3>People</h3>
           <ul className="member-list">
-            {view.session.members.map((m) => {
+            {view.session.members
+              // Simulated members without a position (the demo's host) are just noise.
+              .filter((m) => !(m.is_bot && !live.positions[m.user_id]))
+              .map((m) => {
               const p = live.positions[m.user_id];
               return (
                 <li key={m.user_id}>

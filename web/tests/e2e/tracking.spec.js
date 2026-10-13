@@ -88,3 +88,30 @@ test('placing a zone on the map through the UI', async ({ browser }) => {
   await expect(carol.page.locator('.zone-tooltip', { hasText: 'Home' })).toBeVisible();
   await carol.context.close();
 });
+
+test('explains a blocked location instead of hanging, and recovers when allowed', async ({ browser }) => {
+  // No geolocation permission: what a browser without location access looks like.
+  const { makeSession } = await import('./fixtures.js');
+  const dave = await makeSession('Dave');
+  const context = await browser.newContext();
+  await context.addInitScript(
+    ([key, value]) => window.localStorage.setItem(key, value),
+    ['sb-localhost-auth-token', JSON.stringify(dave.session)],
+  );
+  const page = await context.newPage();
+  await page.goto('/');
+  await page.getByPlaceholder('e.g. Weekend trip').fill('No GPS');
+  await page.getByRole('button', { name: 'Create' }).click();
+
+  const problem = page.locator('.location-problem');
+  await expect(problem).toBeVisible({ timeout: 8000 });
+  await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible();
+
+  // The user allows location in site settings (the device already knows where
+  // it is); the page notices and recovers on its own, without a click.
+  await context.setGeolocation({ ...BANGALORE.mgRoad, accuracy: 30 });
+  await context.grantPermissions(['geolocation']);
+  await expect(page.locator('.leaflet-tooltip', { hasText: 'You' })).toBeVisible({ timeout: 5000 });
+  await expect(problem).toBeHidden();
+  await context.close();
+});

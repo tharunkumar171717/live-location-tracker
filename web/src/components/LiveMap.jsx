@@ -9,6 +9,7 @@ import {
   useMap,
   useMapEvents,
 } from 'react-leaflet';
+import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { formatDistance } from '../lib/geo.js';
 
@@ -54,6 +55,32 @@ function FitToData({ points }) {
   return null;
 }
 
+// "Show me" button: pans to the given person's marker.
+function LocateButton({ point }) {
+  const map = useMap();
+  const ref = useRef(null);
+  useEffect(() => {
+    // Clicks on the button must not reach the map (that would set a target).
+    if (ref.current) L.DomEvent.disableClickPropagation(ref.current);
+  }, []);
+  return (
+    <div className="leaflet-top leaflet-right">
+      <div className="leaflet-control leaflet-bar" ref={ref}>
+        <button
+          type="button"
+          className="locate-btn"
+          title={point ? 'Show my location' : 'Waiting for your location'}
+          aria-label="Show my location"
+          disabled={!point}
+          onClick={() => point && map.setView([point.lat, point.lng], Math.max(map.getZoom(), 16))}
+        >
+          ◎
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // A click on the map (not a drag) picks a point.
 function PickOnClick({ onPick }) {
   useMapEvents({ click: (e) => onPick?.({ lat: e.latlng.lat, lng: e.latlng.lng }) });
@@ -65,6 +92,7 @@ function PickOnClick({ onPick }) {
 // routeCoords: the remaining road route [{lat, lng}], or null to fall back to
 // a straight dashed line.
 // geofences: [{id, name, lat, lng, radius_m}]; draftZone: a zone being placed.
+// locateId: whose marker the "show me" button pans to.
 // trails: {userId: [[lat, lng], ...]} drawn under the markers (replay).
 export function LiveMap({
   positions,
@@ -79,6 +107,7 @@ export function LiveMap({
   draftZone,
   trails,
   fitPoints,
+  locateId,
 }) {
   const points = Object.values(positions);
   const self = selfId ? positions[selfId] : null;
@@ -91,6 +120,7 @@ export function LiveMap({
       />
       <FitToData points={fitPoints || points} />
       {onPick && <PickOnClick onPick={onPick} />}
+      {locateId && <LocateButton point={positions[locateId]} />}
 
       {geofences.map((z) => (
         <Circle

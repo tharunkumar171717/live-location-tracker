@@ -120,7 +120,8 @@ select { font: inherit; padding: 6px 8px; border: 1px solid var(--border); borde
 .stack-tight { display: flex; flex-direction: column; gap: 6px; }
 .plain-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
 .plain-list li { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
-.plain-list.alerts li { justify-content: flex-start; flex-wrap: wrap; }
+.plain-list.alerts li { display: block; }
+.plain-list.alerts .alert-dot { margin-right: 6px; }
 .share-fresh { display: flex; gap: 6px; }
 .share-fresh input { flex: 1; min-width: 0; padding: 6px 8px; font-size: 0.8rem; }
 .zone-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 2px dashed #0d9488; vertical-align: -1px; }
@@ -146,3 +147,7 @@ select { font: inherit; padding: 6px 8px; border: 1px solid var(--border); borde
 .replay-clock { font-size: 1.8rem; font-weight: 700; font-variant-numeric: tabular-nums; margin: 0; }
 .scrubber { width: 100%; accent-color: var(--primary); }
 .dot.expired { background: var(--danger); }
+.location-problem { border: 1px solid #fecaca; background: #fef2f2; border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.location-problem p { margin: 0; }
+.locate-btn { width: 34px; height: 34px; border: 0; background: #fff; font-size: 20px; line-height: 1; cursor: pointer; }
+.locate-btn:disabled { color: #9ca3af; cursor: default; }

@@ -8,7 +8,7 @@ import { SharePanel } from '../components/SharePanel.jsx';
 import { ZonesPanel } from '../components/ZonesPanel.jsx';
 import { AlertFeed, AlertToast } from '../components/AlertFeed.jsx';
 import { useTrackingSession } from '../tracking/useTrackingSession.js';
-import { useGeolocation } from '../tracking/useGeolocation.js';
+import { locationHelp, useGeolocation } from '../tracking/useGeolocation.js';
 import { useWakeLock } from '../tracking/useWakeLock.js';
 import { bearingDegrees, compassDirection, distanceMeters, formatDistance } from '../lib/geo.js';
 import { TRAVEL_MODES, formatDuration } from '../lib/route.js';
@@ -211,7 +211,16 @@ export function SessionPage() {
               )}
             </>
           )}
-          {geo.error && <p className="error small">{geo.error}</p>}
+          {!ended && !geo.current && geo.status === 'locating' && (
+            <p className="hint small">Finding your location… allow location access if your browser asks.</p>
+          )}
+          {geo.error && (
+            <div className="location-problem small">
+              <p className="error">{geo.error}</p>
+              <p className="muted">{locationHelp(geo.status)}</p>
+              <button className="btn btn-small" onClick={geo.retry}>Try again</button>
+            </div>
+          )}
           {live.error && <p className="error small">{live.error}</p>}
 
           <section className="target-card">
@@ -379,6 +388,7 @@ export function SessionPage() {
             distance={distance}
             routeCoords={nav.progress?.remainingCoords}
             onPick={onPick}
+            locateId={user.id}
             geofences={zones}
             draftZone={draft?.lat != null ? draft : null}
           />
